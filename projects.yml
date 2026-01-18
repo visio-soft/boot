@@ -1,0 +1,190 @@
+---
+- name: Laravel Project Setup
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    # Shared directory - all www-data users can access
+    projects_dir: "/var/www/projects"
+    shared_group: "www-data"
+    
+    # Current user (will be added to www-data group)
+    current_user: "{{ lookup('env', 'SUDO_USER') | default(lookup('env', 'USER'), true) }}"
+    current_home: "/home/{{ current_user }}"
+    
+    valet_bin: "{{ current_home }}/.config/composer/vendor/bin/valet"
+    composer_bin: "/usr/local/bin/composer"
+    php_bin: "/usr/bin/php"
+    db_pass: "secret"
+    ansible_remote_tmp: /tmp
+
+    projects:
+      - { name: "zone", repo: "git@github.com:visio-soft/zone.git", db: "zone_db", user: "zone_user" }
+      - { name: "gate", repo: "git@github.com:visio-soft/gate.git", db: "gate_db", user: "gate_user" }
+      - { name: "bikamyon", repo: "git@github.com:bikamyon1/bikamyon.git", db: "bikamyon_db", user: "bikamyon_user" }
+
+  tasks:
+    # ==================================================================
+    # USER SETUP - Add current user to www-data group
+    # ==================================================================
+    - name: Add current user to www-data group
+      user:
+        name: "{{ current_user }}"
+        groups: "{{ shared_group }}"
+        append: yes
+
+    # ==================================================================
+    # SSH KEY FOR GITHUB
+    # ==================================================================
+    - name: Read Public Key
+      command: "cat {{ current_home }}/.ssh/id_ed25519.pub"
+      register: ssh_key
+      changed_when: false
+
+    - name: 🛑 GITHUB KEY CONFIRMATION 🛑
+      debug:
+        msg: 
+          - "################################################################"
+          - "KEY: {{ ssh_key.stdout }}"
+          - "################################################################"
+          - "Please add this key to GitHub: https://github.com/settings/ssh/new"
+          - "################################################################"
+
+    - name: WAITING FOR CONFIRMATION
+      pause:
+        prompt: "❗ Press ENTER after adding the Key to GitHub..."
+
+    # ==================================================================
+    # DATABASE SETUP
+    # ==================================================================
+    - name: Setup Database Users and Databases
+      become_user: postgres
+      block:
+        - postgresql_user: { name: "{{ item.user }}", password: "{{ db_pass }}" }
+          loop: "{{ projects }}"
+        - postgresql_db: { name: "{{ item.db }}", owner: "{{ item.user }}" }
+          loop: "{{ projects }}"
+
+    # ==================================================================
+    # SHARED DIRECTORY SETUP
+    # ==================================================================
+    - name: Create Shared Projects Directory
+      file:
+        path: "{{ projects_dir }}"
+        state: directory
+        owner: root
+        group: "{{ shared_group }}"
+        mode: '2775'  # setgid bit - new files inherit group
+
+    - name: Valet Park Projects Directory
+      become_user: "{{ current_user }}"
+      become_flags: '-i'
+      shell: "{{ valet_bin }} park"
+      args: { chdir: "{{ projects_dir }}" }
+      ignore_errors: yes
+
+    - name: Clone Projects
+      become_user: "{{ current_user }}"
+      become_flags: '-i'
+      git:
+        repo: "{{ item.repo }}"
+        dest: "{{ projects_dir }}/{{ item.name }}"
+        accept_hostkey: yes
+        version: main
+        force: yes
+      loop: "{{ projects }}"
+
+    - name: Configure Projects (.env, Composer, Artisan, NPM)
+      become_user: "{{ current_user }}"
+      become_flags: '-i'
+      shell: |
+        cp -n .env.example .env || true
+        sed -i "s/^DB_DATABASE=.*/DB_DATABASE={{ item.db }}/" .env
+        sed -i "s/^DB_USERNAME=.*/DB_USERNAME={{ item.user }}/" .env
+        sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD={{ db_pass }}/" .env
+        sed -i "s|^APP_URL=.*|APP_URL=http://{{ item.name }}.test|" .env
+        sed -i "s/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=redis/" .env
+        
+        php -d memory_limit=-1 {{ composer_bin }} install --no-interaction --prefer-dist
+        php artisan key:generate
+        php artisan migrate --force
+        php artisan storage:link
+        
+        npm install
+        npm run build
+      args:
+        chdir: "{{ projects_dir }}/{{ item.name }}"
+      loop: "{{ projects }}"
+
+    # ==================================================================
+    # SHARED PERMISSIONS (any www-data user can edit)
+    # ==================================================================
+    - name: Set Project Directory Permissions
+      file:
+        path: "{{ projects_dir }}/{{ item.name }}"
+        state: directory
+        recurse: yes
+        group: "{{ shared_group }}"
+        mode: 'g+rwX'  # group read/write/execute
+      loop: "{{ projects }}"
+
+    - name: Set Storage Permissions (writable by all)
+      file:
+        path: "{{ projects_dir }}/{{ item.name }}/storage"
+        state: directory
+        recurse: yes
+        group: "{{ shared_group }}"
+        mode: '2775'  # setgid + rwx for group
+      loop: "{{ projects }}"
+
+    - name: Set Bootstrap Cache Permissions
+      file:
+        path: "{{ projects_dir }}/{{ item.name }}/bootstrap/cache"
+        state: directory
+        recurse: yes
+        group: "{{ shared_group }}"
+        mode: '2775'
+      loop: "{{ projects }}"
+
+    # ==================================================================
+    # SUPERVISOR (Horizon)
+    # ==================================================================
+    - name: Create Horizon Supervisor Configs
+      copy:
+        dest: "/etc/supervisor/conf.d/{{ item.name }}-horizon.conf"
+        content: |
+          [program:{{ item.name }}-horizon]
+          process_name=%(program_name)s
+          command={{ php_bin }} {{ projects_dir }}/{{ item.name }}/artisan horizon
+          autostart=true
+          autorestart=true
+          user=www-data
+          redirect_stderr=true
+          stdout_logfile={{ projects_dir }}/{{ item.name }}/storage/logs/horizon.log
+          stopwaitsecs=3600
+      loop: "{{ projects }}"
+      register: supervisor_config
+
+    - name: Reload Supervisor
+      block:
+        - command: supervisorctl reread
+          when: supervisor_config.changed
+        - command: supervisorctl update
+          when: supervisor_config.changed
+        - command: "supervisorctl restart {{ item.name }}-horizon"
+          loop: "{{ projects }}"
+          ignore_errors: yes
+
+    - name: Final Status
+      command: supervisorctl status
+      register: final_status
+
+    - name: 🏁 PROJECT SETUP COMPLETE 🏁
+      debug:
+        msg: 
+          - "All projects configured successfully!"
+          - "Projects directory: {{ projects_dir }}"
+          - "Any user in '{{ shared_group }}' group can edit projects"
+          - "Run 'newgrp www-data' or logout/login to apply group"
+          - "Horizon Status:"
+          - "{{ final_status.stdout_lines }}"

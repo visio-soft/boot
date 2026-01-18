@@ -1,0 +1,181 @@
+---
+- name: Ubuntu 24.04 Software Installation
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    target_user: "fatihalp"
+    target_home: "/home/{{ target_user }}"
+    php_ver: "8.4"
+    node_ver: "20"
+    ansible_remote_tmp: /tmp
+
+  tasks:
+    # ==================================================================
+    # SECTION 1: SYSTEM DEPENDENCIES AND USER
+    # ==================================================================
+    - name: Install Critical System Packages
+      apt:
+        update_cache: yes
+        name: 
+          - sudo
+          - acl
+          - zip
+          - unzip
+          - git
+          - curl
+          - wget
+          - gpg
+          - supervisor
+          - python3-psycopg2
+          - libpq-dev
+        state: present
+      tags: [system]
+
+    - name: Create User
+      user:
+        name: "{{ target_user }}"
+        shell: /bin/bash
+        groups: sudo,www-data
+        append: yes
+        create_home: yes
+      tags: [system]
+
+    - name: Grant Passwordless Sudo Access
+      lineinfile:
+        path: "/etc/sudoers.d/{{ target_user }}"
+        line: "{{ target_user }} ALL=(ALL) NOPASSWD: ALL"
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+      tags: [system]
+
+    - name: Generate SSH Key
+      user:
+        name: "{{ target_user }}"
+        generate_ssh_key: yes
+        ssh_key_type: ed25519
+        ssh_key_file: "{{ target_home }}/.ssh/id_ed25519"
+      tags: [system]
+
+    # ==================================================================
+    # SECTION 2: PHP
+    # ==================================================================
+    - name: Add PHP PPA
+      apt_repository: { repo: "ppa:ondrej/php", state: present }
+      tags: [php]
+
+    - name: Install PHP and Extensions
+      apt:
+        update_cache: yes
+        state: latest
+        name:
+          - "php{{ php_ver }}"
+          - "php{{ php_ver }}-fpm"
+          - "php{{ php_ver }}-curl"
+          - "php{{ php_ver }}-mbstring"
+          - "php{{ php_ver }}-xml"
+          - "php{{ php_ver }}-zip"
+          - "php{{ php_ver }}-pgsql"
+          - "php{{ php_ver }}-bcmath"
+          - "php{{ php_ver }}-intl"
+          - "php{{ php_ver }}-gd"
+          - "php{{ php_ver }}-redis"
+          - "php{{ php_ver }}-sqlite3"
+          - "php{{ php_ver }}-imagick"
+          - "php{{ php_ver }}-soap"
+      tags: [php]
+
+    - name: Install Global Composer
+      shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+      args: { creates: /usr/local/bin/composer }
+      tags: [php]
+
+    # ==================================================================
+    # SECTION 3: NODE.JS
+    # ==================================================================
+    - name: Add Node.js Repository
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_{{ node_ver }}.x -o /tmp/nodesource.sh && bash /tmp/nodesource.sh
+      args: { creates: /etc/apt/sources.list.d/nodesource.list }
+      tags: [nodejs]
+
+    - name: Install Node.js
+      apt:
+        update_cache: yes
+        name: nodejs
+        state: latest
+      tags: [nodejs]
+
+    # ==================================================================
+    # SECTION 4: DATABASES
+    # ==================================================================
+    - name: Add PostgreSQL Repository
+      shell: |
+        install -d /usr/share/postgresql-common/pgdg
+        curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+      args: { creates: /etc/apt/sources.list.d/pgdg.list }
+      tags: [database]
+
+    - name: Install PostgreSQL and Redis
+      apt:
+        update_cache: yes
+        state: latest
+        name:
+          - postgresql
+          - postgresql-client
+          - redis-server
+      tags: [database]
+
+    # ==================================================================
+    # SECTION 5: NGINX & VALET
+    # ==================================================================
+    - name: Install Nginx and Valet Dependencies
+      apt:
+        name:
+          - nginx
+          - libnss3-tools
+          - jq
+          - xsel
+        state: latest
+      tags: [nginx]
+
+    - name: Install Valet Linux
+      become_user: "{{ target_user }}"
+      become_flags: '-i'
+      block:
+        - shell: "composer global require cpriego/valet-linux"
+        - shell: "{{ target_home }}/.config/composer/vendor/bin/valet install"
+          ignore_errors: yes
+      tags: [nginx]
+
+    # ==================================================================
+    # SECTION 6: DEVELOPMENT TOOLS
+    # ==================================================================
+    - name: Add DBeaver Repository
+      shell: |
+        curl -fsSL https://dbeaver.io/debs/dbeaver.gpg.key | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/dbeaver.gpg
+        echo "deb https://dbeaver.io/debs/dbeaver-ce /" | tee /etc/apt/sources.list.d/dbeaver.list
+      args: { creates: /etc/apt/sources.list.d/dbeaver.list }
+      tags: [devtools]
+
+    - name: Add VS Code Repository
+      shell: |
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/microsoft.gpg
+        echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
+      args: { creates: /etc/apt/sources.list.d/vscode.list }
+      tags: [devtools]
+
+    - name: Install Development Tools
+      apt:
+        update_cache: yes
+        name:
+          - dbeaver-ce
+          - code
+        state: latest
+      tags: [devtools]
+
+    - name: 🏁 Software Installation Complete
+      debug:
+        msg: "All selected software has been installed successfully!"

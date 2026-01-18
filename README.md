@@ -1,45 +1,56 @@
 # Ubuntu Developer Setup
 
-Ansible playbook for setting up a Laravel development environment on **Ubuntu 24.04**.
+Ansible playbooks for setting up a Laravel development environment on **Ubuntu 24.04**.
 
-## Features
+## 📁 Dosya Yapısı
 
-- PHP 8.4 + Laravel Valet Linux
-- PostgreSQL + Redis
-- Node.js 20 + Supervisor (Horizon)
-- VS Code + DBeaver
+| Dosya | Açıklama |
+|-------|----------|
+| `software.yml` | Yazılım kurulumları (PHP, Node, DB, IDE) |
+| `projects.yml` | Proje kurulumları (clone, migrate, horizon) |
+| `run.sh` | İnteraktif kurulum scripti |
 
-## Quick Start
+## 🚀 Kurulum
 
 ```bash
 chmod +x run.sh
 ./run.sh
 ```
 
-## Configuration
+Script açıldığında tüm bileşenler seçili gelir. İstediğinizi toggle edebilirsiniz:
 
-Edit `setup.yml` to customize your projects:
+```
+[1] ✓ Sistem Paketleri (git, curl, acl, supervisor)
+[2] ✓ PHP 8.4 + Composer + Extensions
+[3] ✓ Node.js 20 + NPM
+[4] ✓ PostgreSQL + Redis
+[5] ✓ Nginx + Valet Linux
+[6] ✓ VS Code + DBeaver
+[7] ✓ Proje Kurulumları
+
+[a] Tümünü Seç  [n] Tümünü Kaldır  [s] Başlat  [q] Çıkış
+```
+
+## ⚡ Hızlı Kurulum (Menüsüz)
+
+```bash
+./run.sh --all    # Tüm bileşenleri kur
+```
+
+## ⚙️ Proje Ayarları
+
+`projects.yml` dosyasını düzenleyin:
 
 ```yaml
-vars:
-  target_user: "your-username"
-  projects:
-    - { name: "myapp", repo: "git@github.com:user/repo.git", db: "myapp_db", user: "myapp_user" }
+projects:
+  - { name: "myapp", repo: "git@github.com:user/repo.git", db: "myapp_db", user: "myapp_user" }
 ```
 
-## Commands
+## 📊 Kurulum Sonrası
 
 ```bash
-./run.sh              # Full install
-./run.sh --check      # Dry run
-./run.sh --help       # Show options
+valet status                  # Valet kontrolü
+sudo supervisorctl status     # Horizon kontrolü
 ```
 
-## After Install
-
-```bash
-valet status                    # Check Valet
-sudo supervisorctl status       # Check Horizon
-```
-
-Projects available at `http://project-name.test`
+Projeler: `http://proje-adi.test`
