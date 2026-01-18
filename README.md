@@ -2,68 +2,67 @@
 
 Ansible playbooks for setting up a Laravel development environment on **Ubuntu 24.04**.
 
-## � Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Download and run
 git clone https://github.com/visio-soft/ubuntu-ansible-developer.git
 cd ubuntu-ansible-developer
 chmod +x run.sh
 ./run.sh
 ```
 
-Or **one-liner** (copy & paste):
+**One-liner:**
 
 ```bash
 git clone https://github.com/visio-soft/ubuntu-ansible-developer.git && cd ubuntu-ansible-developer && chmod +x run.sh && ./run.sh
 ```
 
-## �📁 Dosya Yapısı
+## 📁 File Structure
 
-| Dosya | Açıklama |
-|-------|----------|
-| `software.yml` | Yazılım kurulumları (PHP, Node, DB, IDE) |
-| `projects.yml` | Proje kurulumları (clone, migrate, horizon) |
-| `run.sh` | İnteraktif kurulum scripti |
+| File | Description |
+|------|-------------|
+| `software.yml` | Software installation (PHP, Node, DB, IDE) |
+| `projects.yml` | Project setup (clone, migrate, horizon) |
+| `run.sh` | Interactive installation script |
 
-## 🎛️ Kurulum Menüsü
+## 🎛️ Installation Menu
 
-Script açıldığında tüm bileşenler seçili gelir:
+All components are selected by default:
 
 ```
-[1] ✓ Sistem Paketleri (git, curl, acl, supervisor)
+[1] ✓ System Packages (git, curl, acl, supervisor)
 [2] ✓ PHP 8.4 + Composer + Extensions
 [3] ✓ Node.js 20 + NPM
 [4] ✓ PostgreSQL + Redis
 [5] ✓ Nginx + Valet Linux
 [6] ✓ VS Code + DBeaver
-[7] ✓ Proje Kurulumları
+[7] ✓ Project Setup
 
-[a] Tümünü Seç  [n] Tümünü Kaldır  [s] Başlat  [q] Çıkış
+[a] Select All  [n] Select None  [s] Start  [q] Quit
 ```
 
-## ⚡ Hızlı Kurulum (Menüsüz)
+## ⚡ Quick Install (No Menu)
 
 ```bash
 ./run.sh --all
 ```
 
-## ⚙️ Proje Ayarları
+## ⚙️ Project Configuration
 
-`projects.yml` dosyasını düzenleyin:
+Edit `projects.yml`:
 
 ```yaml
 projects:
   - { name: "myapp", repo: "git@github.com:user/repo.git", db: "myapp_db", user: "myapp_user" }
 ```
 
-**Proje dizini:** `/var/www/projects` (tüm www-data kullanıcıları erişebilir)
+**Projects directory:** `/var/www/projects` (accessible by all www-data users)
 
-## 📊 Kurulum Sonrası
+## 📊 Post Installation
 
 ```bash
-valet status                  # Valet kontrolü
-sudo supervisorctl status     # Horizon kontrolü
+valet status                  # Check Valet
+sudo supervisorctl status     # Check Horizon
 ```
 
-Projeler: `http://proje-adi.test`
+Projects available at: `http://project-name.test`

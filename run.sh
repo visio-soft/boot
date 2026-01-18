@@ -28,13 +28,13 @@ declare -A COMPONENTS=(
 
 COMPONENT_KEYS=("system" "php" "nodejs" "database" "nginx" "devtools" "projects")
 COMPONENT_LABELS=(
-    "Sistem Paketleri (git, curl, acl, supervisor)"
+    "System Packages (git, curl, acl, supervisor)"
     "PHP 8.4 + Composer + Extensions"
     "Node.js 20 + NPM"
     "PostgreSQL + Redis"
     "Nginx + Valet Linux"
     "VS Code + DBeaver"
-    "Proje Kurulumları (clone, migrate, horizon)"
+    "Project Setup (clone, migrate, horizon)"
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -88,9 +88,9 @@ get_selected_tags() {
 
 display_menu() {
     clear
-    print_header "Ubuntu Developer Setup - Kurulum Seçenekleri"
+    print_header "Ubuntu Developer Setup - Installation Options"
     
-    echo -e "Kurmak istediğiniz bileşenleri seçin (numara ile toggle):\n"
+    echo -e "Select components to install (toggle with number):\n"
     
     for i in "${!COMPONENT_KEYS[@]}"; do
         local key="${COMPONENT_KEYS[$i]}"
@@ -105,18 +105,18 @@ display_menu() {
     done
     
     echo ""
-    echo -e "  ${CYAN}[a] Tümünü Seç${NC}"
-    echo -e "  ${CYAN}[n] Tümünü Kaldır${NC}"
-    echo -e "  ${CYAN}[s] Kurulumu Başlat${NC}"
-    echo -e "  ${CYAN}[q] Çıkış${NC}"
+    echo -e "  ${CYAN}[a] Select All${NC}"
+    echo -e "  ${CYAN}[n] Select None${NC}"
+    echo -e "  ${CYAN}[s] Start Installation${NC}"
+    echo -e "  ${CYAN}[q] Quit${NC}"
     echo ""
 }
 
 run_installation() {
-    print_header "Kurulum Başlıyor"
+    print_header "Starting Installation"
     
     # Install dependencies
-    print_info "Bağımlılıklar yükleniyor..."
+    print_info "Installing dependencies..."
     sudo apt update
     sudo apt install -y ansible git curl acl software-properties-common
     
@@ -125,22 +125,22 @@ run_installation() {
     
     # Run software installation if any software selected
     if [ -n "$tags" ]; then
-        print_header "Yazılım Kurulumu (software.yml)"
-        print_info "Seçilen: $tags"
+        print_header "Software Installation (software.yml)"
+        print_info "Selected: $tags"
         sudo ansible-playbook "$SCRIPT_DIR/software.yml" --tags "$tags"
     fi
     
     # Run project setup if selected
     if [ "${COMPONENTS["projects"]}" -eq 1 ]; then
-        print_header "Proje Kurulumu (projects.yml)"
+        print_header "Project Setup (projects.yml)"
         sudo ansible-playbook "$SCRIPT_DIR/projects.yml"
     fi
     
-    print_header "Kurulum Tamamlandı! 🎉"
-    echo -e "Sonraki adımlar:"
-    echo -e "  1. Oturumu kapatıp açın: ${YELLOW}source ~/.bashrc${NC}"
-    echo -e "  2. Valet kontrolü: ${YELLOW}valet status${NC}"
-    echo -e "  3. Horizon kontrolü: ${YELLOW}sudo supervisorctl status${NC}"
+    print_header "Installation Complete! 🎉"
+    echo -e "Next steps:"
+    echo -e "  1. Log out and back in: ${YELLOW}source ~/.bashrc${NC}"
+    echo -e "  2. Check Valet: ${YELLOW}valet status${NC}"
+    echo -e "  3. Check Horizon: ${YELLOW}sudo supervisorctl status${NC}"
 }
 
 # Check for --all flag (skip menu)
@@ -153,7 +153,7 @@ fi
 # Interactive menu
 while true; do
     display_menu
-    read -p "Seçiminiz: " choice
+    read -p "Your choice: " choice
     
     case $choice in
         1) toggle_component "system" ;;
@@ -166,7 +166,7 @@ while true; do
         a|A) select_all ;;
         n|N) select_none ;;
         s|S) run_installation; exit 0 ;;
-        q|Q) echo "Çıkış yapılıyor..."; exit 0 ;;
-        *) print_error "Geçersiz seçim" ;;
+        q|Q) echo "Exiting..."; exit 0 ;;
+        *) print_error "Invalid choice" ;;
     esac
 done
