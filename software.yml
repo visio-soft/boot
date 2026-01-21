@@ -149,6 +149,7 @@
         state: directory
         owner: "{{ target_user }}"
         mode: '0755'
+        recurse: yes
       when: target_user == 'root'
       tags: [nginx]
 

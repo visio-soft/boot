@@ -175,6 +175,7 @@
         state: directory
         owner: "{{ target_user }}"
         mode: '0755'
+        recurse: yes
       when: target_user == 'root'
 
     - name: 13. Valet Linux Installation

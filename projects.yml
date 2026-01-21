@@ -85,6 +85,7 @@
         state: directory
         owner: "{{ current_user }}"
         mode: '0755'
+        recurse: yes
       when: current_user == 'root'
 
     - name: Create Shared Projects Directory
