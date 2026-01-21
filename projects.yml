@@ -85,6 +85,12 @@
         group: "{{ shared_group }}"
         mode: '2775'  # setgid bit - new files inherit group
 
+    - name: Ensure Valet is Installed
+      become_user: "{{ current_user }}"
+      become_flags: '-i'
+      shell: "{{ valet_bin }} install"
+      ignore_errors: yes
+
     - name: Valet Park Projects Directory
       become_user: "{{ current_user }}"
       become_flags: '-i'
