@@ -141,13 +141,21 @@
         state: latest
       tags: [nginx]
 
+    - name: Warn if user is root (Valet cannot run as root)
+      debug:
+        msg: "WARNING: Valet cannot be installed for root user. Skipping Valet installation. Please specify a non-root user."
+      when: target_user == 'root'
+      tags: [nginx]
+
     - name: Install Valet Linux
       become_user: "{{ target_user }}"
       become_flags: '-i'
       block:
         - shell: "composer global require cpriego/valet-linux"
         - shell: "{{ target_home }}/.config/composer/vendor/bin/valet install"
-          ignore_errors: yes
+          register: valet_install_result
+          failed_when: false
+      when: target_user != 'root'
       tags: [nginx]
 
     # ==================================================================

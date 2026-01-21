@@ -85,18 +85,31 @@
         group: "{{ shared_group }}"
         mode: '2775'  # setgid bit - new files inherit group
 
+    - name: Warn if user is root (Valet cannot run as root)
+      debug:
+        msg: "WARNING: Valet cannot be installed for root user. Skipping Valet installation. Please specify a non-root user."
+      when: current_user == 'root'
+
     - name: Ensure Valet is Installed
       become_user: "{{ current_user }}"
       become_flags: '-i'
       shell: "{{ valet_bin }} install"
-      ignore_errors: yes
+      register: valet_install_result
+      failed_when: false
+      when: current_user != 'root'
 
     - name: Valet Park Projects Directory
       become_user: "{{ current_user }}"
       become_flags: '-i'
       shell: "{{ valet_bin }} park"
       args: { chdir: "{{ projects_dir }}" }
-      ignore_errors: yes
+      register: valet_park_result
+      failed_when: false
+      when: 
+        - current_user != 'root'
+        - valet_install_result is defined
+        - valet_install_result.rc is defined
+        - valet_install_result.rc == 0
 
     - name: Clone Projects
       become_user: "{{ current_user }}"

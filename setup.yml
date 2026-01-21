@@ -167,17 +167,24 @@
     # ==================================================================
     # SECTION 4: VALET AND PROJECT SETUP (USER MODE)
     # ==================================================================
+    - name: 13. Warn if user is root (Valet cannot run as root)
+      debug:
+        msg: "WARNING: Valet cannot be installed for root user. Skipping Valet installation. Please specify a non-root user."
+      when: target_user == 'root'
+
     - name: 13. Valet Linux Installation
       become: yes
       become_user: "{{ target_user }}"
       become_flags: '-i'
+      when: target_user != 'root'
       block:
         - name: Install Valet
           shell: "composer global require cpriego/valet-linux"
           
         - name: Valet Install
           shell: "{{ valet_bin }} install"
-          ignore_errors: yes
+          register: valet_install_result
+          failed_when: false
 
         - name: Create Projects Directory
           file: { path: "{{ projects_dir }}", state: directory, mode: '0755' }
@@ -185,7 +192,12 @@
         - name: Valet Park
           shell: "{{ valet_bin }} park"
           args: { chdir: "{{ projects_dir }}" }
-          ignore_errors: yes
+          register: valet_park_result
+          failed_when: false
+          when: 
+            - valet_install_result is defined
+            - valet_install_result.rc is defined
+            - valet_install_result.rc == 0
 
     - name: 14. Clone Projects
       become: yes
