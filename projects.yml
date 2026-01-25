@@ -207,6 +207,9 @@
       args:
         chdir: "{{ projects_dir }}/{{ item.name }}"
       loop: "{{ projects }}"
+      loop_control:
+        index_var: project_index
+      when: sail_binary_check.results[project_index].stat.exists | default(false)
       register: container_health
       failed_when: false
 
