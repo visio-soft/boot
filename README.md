@@ -4,6 +4,20 @@ Ansible playbooks for setting up a **Native Laravel** development environment on
 
 ## 🚀 Quick Start
 
+### Option 1: GitHub Codespaces (Recommended for Testing)
+
+Test the setup instantly in a cloud-based Ubuntu 24.04 environment:
+
+1. Click the **Code** button on GitHub
+2. Select **Codespaces** tab
+3. Click **Create codespace on main**
+4. Wait for the environment to initialize
+5. Run `./run.sh` in the terminal
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/visio-soft/ubuntu-ansible-developer)
+
+### Option 2: Local Installation
+
 The installation script will automatically install and configure native services (Nginx, PostgreSQL, Redis, PHP-FPM) for Laravel development.
 
 ```bash
