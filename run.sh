@@ -174,11 +174,14 @@ while true; do
     
     case $choice in
         1) toggle_component "system" ;;
-        2) toggle_component "docker" ;;
-        3) toggle_component "nodejs" ;;
-        4) toggle_component "devtools" ;;
-        5) toggle_component "antigravity" ;;
-        6) toggle_component "projects" ;;
+        2) toggle_component "php" ;;
+        3) toggle_component "nginx" ;;
+        4) toggle_component "database" ;;
+        5) toggle_component "redis" ;;
+        6) toggle_component "nodejs" ;;
+        7) toggle_component "devtools" ;;
+        8) toggle_component "antigravity" ;;
+        9) toggle_component "projects" ;;
         a|A) select_all ;;
         n|N) select_none ;;
         s|S) run_installation; exit 0 ;;
