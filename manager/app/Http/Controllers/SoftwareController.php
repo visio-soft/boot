@@ -12,43 +12,58 @@ class SoftwareController extends Controller
         'antigravity' => [
             'name' => 'Google Antigravity Editor',
             'bin' => 'antigravity', 
+            'package' => 'antigravity',
             'url' => null, 
             'description' => 'Advanced Agentic Coding Editor.',
-            'icon' => '🚀'
         ],
         'chrome' => [
             'name' => 'Google Chrome',
             'bin' => 'google-chrome',
+            'package' => 'google-chrome-stable',
             'url' => null,
             'description' => 'Fast, secure web browser.',
-            'icon' => '🌐'
         ],
         'code' => [
             'name' => 'VS Code',
             'bin' => 'code',
+            'package' => 'code',
             'url' => null,
             'description' => 'Code editing. Redefined.',
-            'icon' => '📝'
+        ],
+        'phpstorm' => [
+            'name' => 'PhpStorm',
+            'bin' => 'phpstorm',
+            'package' => 'phpstorm', // Assuming PPA or mostly likely snap, but using this for apt if available
+            'url' => null,
+            'description' => 'The Lightning-Smart PHP IDE.',
         ],
         'tableplus' => [
             'name' => 'TablePlus',
             'bin' => 'tableplus',
+            'package' => 'tableplus',
             'url' => null, 
             'description' => 'Modern, native tool for database management.',
-            'icon' => '🐘'
         ],
         'dbeaver' => [
             'name' => 'DBeaver',
             'bin' => 'dbeaver-ce', 
+            'package' => 'dbeaver-ce',
             'url' => null,
             'description' => 'Universal Database Tool.',
-            'icon' => '🦫'
         ]
     ];
 
     public function index()
     {
         $software = [];
+        
+        // simple cache of upgradable packages
+        $upgradable = [];
+        $res = Process::run("apt list --upgradable");
+        if ($res->successful()) {
+            $upgradable = $res->output();
+        }
+
         foreach ($this->tools as $key => $tool) {
             $isInstalled = false;
             $currentVersion = null;
@@ -75,22 +90,32 @@ class SoftwareController extends Controller
                      $lines = explode("\n", $v->output());
                      $currentVersion = $lines[0] ?? null;
                 } elseif ($key === 'tableplus') {
-                    // TablePlus doesn't have a reliable CLI version flag, check dpkg
                     $v = Process::run("dpkg -s tableplus | grep Version");
                     if ($v->successful()) {
                          $currentVersion = str_replace('Version: ', '', trim($v->output()));
                     }
+                } elseif ($key === 'phpstorm') {
+                    // Try getting version if installed via snap or simple bin
+                    $v = Process::run("phpstorm --version"); 
+                    // output often complex, or might not exist if valid license needed
+                    // simplistic check
+                    if ($v->successful()) {
+                         preg_match('/PhpStorm (20\d\d\.\d(\.\d)?)/', $v->output(), $m);
+                         $currentVersion = $m[1] ?? 'Detected';
+                    }
+                }
+
+                // Check update
+                if (isset($tool['package']) && str_contains($upgradable, $tool['package'] . '/')) {
+                    $hasUpdate = true;
                 }
             }
             
-            // Check for updates (naive check via apt-cache policy)
-            // This is just a simulation for now or expensive call.
-            // Let's rely on manual update or just showing current version.
-
             $software[] = array_merge($tool, [
                 'key' => $key,
                 'installed' => $isInstalled,
-                'version' => $currentVersion
+                'version' => $currentVersion,
+                'has_update' => $hasUpdate
             ]);
         }
 

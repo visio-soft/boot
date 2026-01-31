@@ -43,6 +43,9 @@ class InstallSoftware implements ShouldQueue
                 case 'antigravity':
                     $this->installAntigravity();
                     break;
+                case 'phpstorm':
+                    $this->installPhpStorm();
+                    break;
                 default:
                     Log::warning("Unknown software: $software");
             }
@@ -104,5 +107,13 @@ class InstallSoftware implements ShouldQueue
         Process::run('sudo apt-get update');
         Process::run('sudo apt-get install -y antigravity');
         Log::info("Google Antigravity installed.");
+    }
+
+    private function installPhpStorm()
+    {
+        Log::info("Installing PhpStorm...");
+        // Snap is the standard way on Ubuntu for JetBrains
+        Process::run('sudo snap install phpstorm --classic');
+        Log::info("PhpStorm installed.");
     }
 }

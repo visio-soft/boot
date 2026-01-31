@@ -11,12 +11,14 @@
     @foreach($software as $tool)
         <div class="p-6 flex items-center justify-between hover:bg-[#fafafa] transition-colors">
             <div class="flex items-center gap-5">
-                <span class="text-3xl filter drop-shadow-sm">{{ $tool['icon'] }}</span>
                 <div>
                     <h3 class="text-lg font-semibold text-[#1d1d1f] flex items-center gap-2">
                         {{ $tool['name'] }}
                         @if($tool['installed'])
                             <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wide">Installed</span>
+                        @endif
+                        @if($tool['has_update'])
+                            <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide">Update Available</span>
                         @endif
                     </h3>
                     <p class="text-sm text-apple-grey mt-0.5">{{ $tool['description'] }}</p>
