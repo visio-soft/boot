@@ -1,72 +1,57 @@
-# bOOT - PHP Developer Environment
+# bOOT - Developer Environment
 
 A professional, local PHP development stack for Ubuntu, inspired by Laravel Herd. This project provides an automated Ansible system provisioner and a sleek Laravel dashboard to manage your development workflows.
 
-### 🚀 Features
+### ⚡ Easy Install
 
-- **Dynamic Project Management**: Create Laravel projects via Git URLs with built-in SSH access validation.
-- **Service Dashboard**: Real-time status, restart controls, and log viewing for Nginx, PHP 8.4 FPM, PostgreSQL, and Redis.
-- **Herd-style Log Viewer**: High-performance log tailing with:
-    - Live search and filtering.
-    - Auto-refreshing entries.
-    - **IDE Integration**: Click stack trace file paths to jump directly to VS Code.
-- **Software Center**: One-click installation of essential dev tools (VS Code, Chrome, TablePlus, DBeaver).
-- **Database Management**: Instant PostgreSQL database creation and a "Shortcut to TablePlus" with pre-filled connection strings.
-- **Modern UI**: Clean, Apple-inspired interface with Glassmorphism and dark/light support.
+Start a fresh Ubuntu installation with one command:
 
----
+```bash
+./run.sh
+```
 
-### 🛠️ Components
-
-#### 1. Ansible System Provisioner
-The `setup.yml` playbook configures the base operating system with:
-- PHP 8.4 (FPM & CLI)
-- Nginx
-- PostgreSQL
-- Redis
-- Node.js & Composer
-- Supervisor (for background workers)
-
-#### 2. The Manager App
-Located in the `/manager` directory, this Laravel 12 application serves as the command center for your development environment.
+This script will interactively guide you through installing:
+- **Core Stack**: PHP 8.4, Nginx, PostgreSQL, Redis, Node.js 20
+- **Developer Tools**: VS Code, DBeaver, etc. (Optional)
+- **bOOT Manager**: The web dashboard to manage everything.
 
 ---
 
-### 📥 Getting Started
+### 🚀 Manager App
 
-1. **Initial Provisioning**:
-   Ensure you have Ansible installed, then run the setup script:
-   ```bash
-   ansible-playbook setup.yml
-   ```
+Once installed, access your dashboard at **[http://manager.test](http://manager.test)**.
 
-2. **The Manager Interface**:
-   Access the web interface at:
-   [http://manager.test](http://manager.test)
+#### **Projects**
+- **One-Click Creation**: Clone from Git or start fresh Laravel projects.
+- **Auto Configuration**: Automatically handles Nginx, Hosts file, and SSL.
+- **Horizon Integration**: Install and monitor Laravel Horizon with a checkbox.
+- **Git Verification**: Built-in SSH key validation for private repositories.
 
-3. **Creating Projects**:
-   - Navigate to **Projects**.
-   - Provide a Git SSH URL (e.g., `git@github.com:user/repo.git`).
-   - Use the **Check Access** button to verify your SSH keys.
-   - Choose to install **Laravel Horizon** optionally during setup.
+#### **System Services**
+- **Control Center**: Restart Nginx, PHP-FPM, Redis, or Postgres instantly.
+- **Live Logs**: View real-time logs for any service or project directly in the browser.
+- **Config Editors**: Edit `php.ini` or project `.env` files with a dedicated editor.
 
----
+#### **Database**
+- **Instant Setup**: Create new PostgreSQL databases in seconds.
+- **Quick Access**: One-click connection to TablePlus or DBeaver.
 
-### 🖥️ Software & Services
-
-Monitor and manage your system from the **Services & Logs** section. You can:
-- Tail system logs or project-specific logs.
-- Edit your `php.ini` directly from the UI with auto-restart.
-- Install or update development software via the **Software Center**.
+#### **Software**
+- **Dev Tools**: Install essential apps like Chrome, VS Code, and Postman directly from the UI.
 
 ---
 
-### 📂 Directory Structure
+### 🛠️ Manual Usage
 
-- `/manager`: The Laravel Management Dashboard.
-- `setup.yml`: Main Ansible system playbook.
-- `projects.yml`: (Legacy) project definitions.
-- `software.yml`: (Legacy) software definitions.
+You can also run provisioners manually if needed:
+
+```bash
+# Full System Setup
+ansible-playbook setup.yml
+
+# Install Specific Project
+ansible-playbook projects.yml --extra-vars "target_user=alp"
+```
 
 ---
 

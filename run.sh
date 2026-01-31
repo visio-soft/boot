@@ -23,8 +23,8 @@ declare -A COMPONENTS=(
     ["database"]=1
     ["redis"]=1
     ["nodejs"]=1
-    ["devtools"]=1
-    ["antigravity"]=1
+    ["devtools"]=0
+    ["antigravity"]=0
     ["projects"]=1
 )
 
@@ -136,11 +136,12 @@ run_installation() {
     
     # Run software installation if any software selected
     if [ -n "$tags" ]; then
-        print_header "Software Installation (software.yml)"
+        print_header "Software Installation (setup.yml)"
         print_info "Selected: $tags"
         print_info "Installing for user: $TARGET_USER"
-        sudo ansible-playbook "$SCRIPT_DIR/software.yml" --tags "$tags" --extra-vars "target_user=$TARGET_USER"
+        sudo ansible-playbook "$SCRIPT_DIR/setup.yml" --tags "$tags" --extra-vars "target_user=$TARGET_USER"
     fi
+    
     
     # Run project setup if selected
     if [ "${COMPONENTS["projects"]}" -eq 1 ]; then
@@ -148,16 +149,104 @@ run_installation() {
         print_info "Setting up projects for user: $TARGET_USER"
         sudo ansible-playbook "$SCRIPT_DIR/projects.yml" --extra-vars "target_user=$TARGET_USER"
     fi
+
+    # Run Manager Setup (Antigravity)
+    if [ "${COMPONENTS["antigravity"]}" -eq 1 ]; then
+        setup_antigravity_manager
+    fi
     
     print_header "Installation Complete! 🎉"
     echo -e "Installation user: ${GREEN}$TARGET_USER${NC}"
     echo -e "Next steps:"
-    echo -e "  1. Navigate to project: ${YELLOW}cd /var/www/projects/zone${NC}"
+    echo -e "  1. Access Manager: ${YELLOW}http://manager.test${NC}"
     echo -e "  2. Access applications:"
     echo -e "     - zone: ${YELLOW}http://zone.test${NC}"
     echo -e "     - gate: ${YELLOW}http://gate.test${NC}"
     echo -e "  3. Check services: ${YELLOW}sudo systemctl status nginx postgresql redis-server${NC}"
-    echo -e "  4. Check Horizon: ${YELLOW}supervisorctl status${NC}"
+}
+
+setup_antigravity_manager() {
+    print_header "Setting up Antigravity Manager"
+    print_info "Configuring Manager App..."
+
+    # Nginx
+    cat <<EOF > manager.test
+server {
+    listen 80;
+    listen [::]:80;
+    server_name manager.test;
+    root $SCRIPT_DIR/manager/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_index index.php;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
+
+    sudo mv manager.test /etc/nginx/sites-available/manager.test
+    sudo ln -sf /etc/nginx/sites-available/manager.test /etc/nginx/sites-enabled/manager.test
+    sudo systemctl reload nginx
+
+    # Hosts
+    if ! grep -q "manager.test" /etc/hosts; then
+        echo "127.0.0.1 manager.test" | sudo tee -a /etc/hosts
+    fi
+
+    # Database
+    sudo -u postgres psql -c "CREATE USER manager WITH PASSWORD 'secret';" >/dev/null 2>&1 || true
+    sudo -u postgres psql -c "CREATE DATABASE manager OWNER manager;" >/dev/null 2>&1 || true
+
+    # Env
+    print_info "Configuring .env..."
+    cd "$SCRIPT_DIR/manager"
+    
+    if [ ! -f .env ]; then
+        cp .env.example .env 2>/dev/null || true
+    fi
+
+    if [ -f .env ]; then
+        sed -i "s/^DB_CONNECTION=.*/DB_CONNECTION=pgsql/" .env
+        sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+        sed -i "s/^DB_PORT=.*/DB_PORT=5432/" .env
+        sed -i "s/^DB_DATABASE=.*/DB_DATABASE=manager/" .env
+        sed -i "s/^DB_USERNAME=.*/DB_USERNAME=manager/" .env
+        sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=secret/" .env
+        sed -i "s|^APP_URL=.*|APP_URL=http://manager.test|" .env
+    fi
+
+    # Fix permissions
+    sudo chown -R $TARGET_USER:www-data storage bootstrap/cache
+    sudo chmod -R 775 storage bootstrap/cache
+
+    # Migrate
+    print_info "Running Migrations..."
+    php artisan migrate --force
+
+    print_success "Antigravity Manager Setup Complete!"
 }
 
 # Check for --all flag (skip menu)
