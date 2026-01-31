@@ -1,150 +1,185 @@
 @extends('layouts.app')
 
 @section('content')
-<header class="flex justify-between items-center mb-10">
-    <h1 class="text-3xl font-bold tracking-tight">Projects</h1>
+<header class="mb-8 flex items-center justify-between">
     <div>
-        <span class="badge badge-other">PHP 8.4</span>
+        <h1 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">Projects</h1>
+        <p class="text-apple-grey mt-2">Manage your local development projects.</p>
     </div>
+    <button onclick="document.getElementById('createForm').classList.toggle('hidden')" class="btn">
+        <span class="mr-1">+</span> New Project
+    </button>
 </header>
 
-<div class="bg-white p-6 rounded-apple-lg shadow-sm border border-black/5 mb-10 max-w-2xl">
-    <div class="mb-2 font-semibold">Create New Project</div>
-    
-    <form action="{{ route('sites.store') }}" method="POST" id="createForm" class="space-y-4">
+<!-- Create New Project (Hidden by default) -->
+<div id="createForm" class="card mb-12 hidden">
+    <h2 class="text-lg font-semibold mb-6">New Project</h2>
+    <form action="{{ route('sites.store') }}" method="POST" class="space-y-5">
         @csrf
-        
-        <!-- Repo URL Input -->
         <div>
-            <label class="block text-xs font-semibold text-apple-grey mb-1 uppercase tracking-wider">GitHub Repository (SSH Recommended)</label>
-            <div class="flex gap-2">
-                <input type="text" name="repo" id="repo" placeholder="git@github.com:username/repo.git" class="input-field grow" autocomplete="off">
-            </div>
+            <label class="block text-sm text-apple-grey mb-2">GitHub Repository</label>
+            <input type="text" name="repo" id="repo" placeholder="git@github.com:user/repo.git" class="input-field" autocomplete="off">
             <div id="gitMessage" class="mt-2 text-xs hidden"></div>
         </div>
-
-        <!-- Project Name -->
         <div>
-            <label class="block text-xs font-semibold text-apple-grey mb-1 uppercase tracking-wider">Project Name (Folder Name)</label>
-            <input type="text" name="name" id="name" placeholder="my-app" class="input-field" required>
+            <label class="block text-sm text-apple-grey mb-2">Project Name</label>
+            <input type="text" name="name" id="name" placeholder="my-project" class="input-field" required>
         </div>
-
-        <!-- Options -->
-        <div class="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="horizon" id="horizon" value="1" class="cursor-pointer">
-            <label for="horizon" class="cursor-pointer">Install & Configure Laravel Horizon</label>
+        <div class="flex items-center gap-3">
+            <input type="checkbox" name="horizon" id="horizon" value="1" class="w-4 h-4 rounded">
+            <label for="horizon" class="text-sm">Install Laravel Horizon</label>
         </div>
-
-        <button type="submit" id="submitBtn" class="btn w-full">Create Project</button>
+        <div class="flex justify-end">
+            <button type="submit" class="btn">Create Project</button>
+        </div>
     </form>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Project List -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
     @foreach($sites as $site)
-        <div class="card">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <div class="text-lg font-semibold">{{ $site['name'] }}</div>
-                    <a href="{{ $site['url'] }}" target="_blank" class="text-sm text-apple-blue hover:underline">{{ $site['url'] }} ↗</a>
-                </div>
-                <div>
-                   <span class="badge {{ $site['type'] === 'Laravel' ? 'badge-laravel' : 'badge-other' }}">
-                       {{ $site['type'] }} {{ $site['version'] }}
-                   </span>
-                </div>
+    <div class="card flex flex-col h-full">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <h3 class="text-lg font-semibold">{{ $site['name'] }}</h3>
+                <a href="{{ $site['url'] }}" target="_blank" class="text-sm text-apple-blue hover:underline">{{ $site['url'] }}</a>
             </div>
-            
-            <div class="text-[0.8rem] text-apple-grey space-y-1.5">
-                <span class="block">Path: {{ $site['path'] }}</span>
-                <span class="block flex items-center gap-1.5 font-medium text-apple-grey">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
-                    Database: <span class="text-apple-dark">{{ $site['db_name'] }}</span>
-                </span>
-            </div>
-
-            <div class="mt-6 pt-4 border-t border-apple-border flex flex-col gap-3">
-                @if($site['type'] === 'Laravel')
-                    <div class="flex items-center justify-between">
-                        <span class="text-[0.8rem] font-medium">Horizon Status</span>
-                        @if($site['horizon'] === 'running')
-                            <div class="flex items-center gap-3">
-                                <a href="{{ $site['url'] }}/horizon" target="_blank" class="text-[0.7rem] font-bold text-apple-blue hover:underline uppercase tracking-tight">Open Dashboard</a>
-                                <span class="badge bg-green-500/10 text-green-600 flex items-center normal-case">
-                                     <span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span> Active
-                                </span>
-                            </div>
-                        @else
-                             <span class="badge bg-gray-500/10 text-gray-500 normal-case">
-                                 Inactive
-                            </span>
-                        @endif
-                    </div>
-                @endif
-                
-                <div class="flex gap-2">
-                    @if($site['env_exists'])
-                        <a href="{{ route('sites.env', $site['name']) }}" class="btn-secondary !py-1.5 !text-[11px] font-bold uppercase tracking-tight grow justify-center">Edit .env</a>
-                    @endif
-                    <form action="{{ route('sites.destroy', $site['name']) }}" method="POST" onsubmit="return confirm('Silmek istediğine emin misin? Bu işlem projeyi ve yapılandırmaları tamamen silecektir (Veritabanı korunur).')">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn-secondary !py-1.5 !px-3 hover:!bg-red-50 hover:!text-red-500 hover:!border-red-200 transition-colors" title="Delete Project">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                    </form>
-                </div>
-            </div>
+            <span class="badge {{ $site['type'] === 'Laravel' ? 'badge-laravel' : 'badge-other' }}">{{ $site['type'] }}</span>
         </div>
+
+        <div class="text-sm text-apple-grey space-y-1 mb-6 flex-1">
+            <p>Database: <span class="text-[#1d1d1f]">{{ $site['db_name'] }}</span></p>
+            <p>Version: <span class="text-[#1d1d1f]">{{ $site['version'] ?? 'N/A' }}</span></p>
+        </div>
+
+        @if($site['type'] === 'Laravel')
+        <div class="flex items-center justify-between py-3 border-t border-apple-border">
+            <span class="text-sm text-apple-grey">Horizon</span>
+            @if($site['horizon'] === 'running')
+                <div class="flex items-center gap-3">
+                    <a href="{{ $site['url'] }}/horizon" target="_blank" class="text-xs text-apple-blue hover:underline">Open</a>
+                    <span class="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Running
+                    </span>
+                </div>
+            @else
+                <span class="text-xs text-apple-grey">Inactive</span>
+            @endif
+        </div>
+        @endif
+
+        <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-apple-border">
+            <!-- Logs -->
+            <a href="{{ route('services.logs', ['type' => 'project', 'project' => $site['name']]) }}" class="btn-secondary text-[11px] h-8 flex items-center justify-center font-medium" title="View Logs">
+                Logs
+            </a>
+
+            <!-- Env -->
+            @if($site['env_exists'])
+            <a href="{{ route('sites.env', $site['name']) }}" class="btn-secondary text-[11px] h-8 flex items-center justify-center font-medium" title="Edit .env">
+                .env
+            </a>
+            @else
+            <span class="btn-secondary opacity-50 cursor-not-allowed text-[11px] h-8 flex items-center justify-center font-medium">.env</span>
+            @endif
+
+            <!-- Delete -->
+            <form action="{{ route('sites.destroy', $site['name']) }}" method="POST" class="h-8" onsubmit="return confirm('Delete this project?')">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn-secondary w-full h-full text-[11px] flex items-center justify-center font-medium hover:bg-red-50 hover:text-red-600 transition-colors" title="Delete">
+                    Delete
+                </button>
+            </form>
+        </div>
+    </div>
     @endforeach
 </div>
 
+<!-- Services Section -->
+<div class="mt-16 pt-8 border-t border-apple-border">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h2 class="text-2xl font-semibold tracking-tight text-[#1d1d1f]">System Services</h2>
+            <p class="text-apple-grey mt-1 text-sm">Monitor and manage core infrastructure.</p>
+        </div>
+        <a href="{{ route('services.php') }}" class="btn-secondary text-xs px-4 py-2">Edit php.ini</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        @foreach($servicesStatus as $key => $s)
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">{{ $s['label'] }}</h3>
+                @if($s['active'])
+                    <span class="text-xs text-green-600 font-medium flex items-center gap-1.5">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Active
+                    </span>
+                @else
+                    <span class="text-xs text-red-500 font-medium">Stopped</span>
+                @endif
+            </div>
+            <p class="text-xs text-apple-grey mb-4 font-mono">{{ $key }}</p>
+            <div class="flex gap-2">
+                <form action="{{ route('sites.restart-service') }}" method="POST" class="flex-1">
+                    @csrf
+                    <input type="hidden" name="service" value="{{ $key }}">
+                    <button type="submit" class="btn-secondary text-xs w-full py-2">Restart</button>
+                </form>
+                @php 
+                    $logKey = match($key) {
+                        'nginx' => 'nginx',
+                        'php8.4-fpm' => 'php',
+                        'redis-server' => 'redis',
+                        'postgresql' => 'postgres',
+                        default => null
+                    };
+                @endphp
+                @if($logKey)
+                <a href="{{ route('services.logs', ['type' => $logKey]) }}" class="btn-secondary text-xs px-4 py-2" title="View Logs">Logs</a>
+                @endif
+            </div>
+        </div>
+        @endforeach
+    </div>
+</div>
+
 <script>
-let checkTimeout;
+let timeout;
 const repoInput = document.getElementById('repo');
-const submitBtn = document.getElementById('submitBtn');
 const msg = document.getElementById('gitMessage');
 
 repoInput.addEventListener('input', () => {
-    clearTimeout(checkTimeout);
-    msg.textContent = 'Typing...';
-    msg.className = 'mt-2 text-xs text-apple-grey block';
-    
-    checkTimeout = setTimeout(checkGit, 800);
+    clearTimeout(timeout);
+    msg.textContent = '';
+    msg.className = 'mt-2 text-xs hidden';
+    timeout = setTimeout(checkGit, 600);
 });
 
 async function checkGit() {
     const repo = repoInput.value;
-    
-    if (!repo) {
-        msg.textContent = '';
-        msg.className = 'mt-2 text-xs hidden';
-        return;
-    }
+    if (!repo) return;
 
-    msg.textContent = 'Checking access...';
+    msg.textContent = 'Checking...';
     msg.className = 'mt-2 text-xs text-apple-grey block';
 
     try {
-        const response = await fetch(`{{ route('sites.check-git') }}?repo=${encodeURIComponent(repo)}`);
-        const data = await response.json();
-        
+        const res = await fetch(`{{ route('sites.check-git') }}?repo=${encodeURIComponent(repo)}`);
+        const data = await res.json();
+
         if (data.status === 'ok') {
-            msg.textContent = '✅ Access Granted';
-            msg.className = 'mt-2 text-xs text-green-500 block';
-            
-            const nameInput = document.getElementById('name');
-            if (!nameInput.value) {
-                const parts = repo.split('/');
-                const last = parts[parts.length - 1];
-                const clean = last.replace('.git', '');
-                nameInput.value = clean;
+            msg.textContent = '✓ Access verified';
+            msg.className = 'mt-2 text-xs text-green-600 block';
+            if (!document.getElementById('name').value) {
+                const name = repo.split('/').pop().replace('.git', '');
+                document.getElementById('name').value = name;
             }
         } else {
-            msg.innerHTML = `❌ ${data.message}<br>Suggested Action: ${data.key_guide}<br><strong>Public Key:</strong><br><textarea readonly class="w-full h-20 text-[10px] mt-1 p-2 bg-gray-50 rounded border border-gray-200 outline-none">${data.public_key}</textarea>`;
+            msg.innerHTML = `✕ ${data.message}<br><textarea readonly class="w-full h-16 mt-2 p-2 text-[10px] bg-gray-100 rounded">${data.public_key || ''}</textarea>`;
             msg.className = 'mt-2 text-xs text-red-500 block';
         }
     } catch (e) {
-        msg.textContent = '❌ Error checking access.';
+        msg.textContent = '✕ Check failed';
         msg.className = 'mt-2 text-xs text-red-500 block';
     }
 }

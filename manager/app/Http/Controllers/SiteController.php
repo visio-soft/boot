@@ -10,8 +10,26 @@ use Illuminate\Support\Facades\Log;
 
 class SiteController extends Controller
 {
+    private $services = [
+        'nginx' => 'Nginx',
+        'php8.4-fpm' => 'PHP 8.4 FPM',
+        'postgresql' => 'PostgreSQL',
+        'redis-server' => 'Redis',
+    ];
+
     public function index()
     {
+        // 1. Service Status
+        $servicesStatus = [];
+        foreach ($this->services as $service => $label) {
+            $res = Process::run("systemctl is-active $service");
+            $servicesStatus[$service] = [
+                'label' => $label,
+                'active' => trim($res->output()) === 'active',
+            ];
+        }
+
+        // 2. List Projects
         $projectsDir = '/var/www/projects';
         $sites = [];
 
@@ -64,7 +82,23 @@ class SiteController extends Controller
             }
         }
 
-        return view('sites.index', compact('sites'));
+        return view('sites.index', [
+            'sites' => $sites,
+            'servicesStatus' => $servicesStatus
+        ]);
+    }
+    
+    public function restartService(Request $request) 
+    {
+        $service = $request->input('service');
+        if (!array_key_exists($service, $this->services)) {
+            return back()->with('error', 'Invalid service');
+        }
+
+        Process::run("sudo systemctl restart $service");
+        sleep(1);
+
+        return back()->with('success', "Restarted {$this->services[$service]}");
     }
 
     public function checkGit(Request $request)

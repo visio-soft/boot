@@ -48,13 +48,15 @@
 </head>
 <body class="flex min-h-screen">
     <aside class="w-[250px] bg-white/80 backdrop-blur-xl p-8 flex flex-col border-r border-apple-border">
-        <div class="text-xl font-semibold mb-10 flex items-center gap-2">🚀 bOOT</div>
+        <div class="text-xl font-mono font-bold tracking-tighter mb-10 flex items-center gap-2 text-[#1d1d1f]">
+            <span class="text-apple-blue">>_</span> b00t<span class="animate-pulse">_</span>
+        </div>
+
         <nav class="space-y-1">
             @foreach([
-                ['sites.index', 'Projects', 'sites.*'],
+                ['sites.index', 'Projects & Services', 'sites.*'],
                 ['databases.index', 'Databases', 'databases.*'],
-                ['software.index', 'Software', 'software.*'],
-                ['services.index', 'Services & Logs', 'services.*']
+                ['software.index', 'Software', 'software.*']
             ] as [$route, $label, $pattern])
             <a href="{{ route($route) }}" 
                class="block px-3 py-2.5 rounded-apple-sm font-medium text-[0.9rem] transition-all {{ request()->routeIs($pattern) ? 'bg-apple-blue text-white' : 'text-[#1d1d1f] hover:bg-black/5' }}">

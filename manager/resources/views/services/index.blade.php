@@ -1,37 +1,35 @@
 @extends('layouts.app')
 
 @section('content')
-<header class="flex justify-between items-center mb-10">
-    <h1 class="text-3xl font-bold tracking-tight">Services & Logs</h1>
+<header class="flex items-center justify-between mb-12">
     <div>
-        <a href="{{ route('services.php') }}" class="btn btn-secondary">Edit php.ini</a>
+        <h1 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">Services</h1>
+        <p class="text-apple-grey mt-2">Monitor system services and view logs.</p>
     </div>
+    <a href="{{ route('services.php') }}" class="btn-secondary text-sm px-5 py-2.5">Edit php.ini</a>
 </header>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- System Services -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-12">
     @foreach($status as $key => $s)
     <div class="card">
-        <div class="flex justify-between items-start mb-6">
-            <div>
-                <div class="text-lg font-semibold">{{ $s['label'] }}</div>
-                <div class="text-xs text-apple-grey font-mono">{{ $key }}</div>
-            </div>
-            <div>
-                @if($s['active'])
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-green-500/10 text-green-600 uppercase tracking-tighter">Active</span>
-                @else
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-red-500/10 text-red-600 uppercase tracking-tighter">Stopped</span>
-                @endif
-            </div>
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">{{ $s['label'] }}</h3>
+            @if($s['active'])
+                <span class="text-xs text-green-600 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Active
+                </span>
+            @else
+                <span class="text-xs text-red-500 font-medium">Stopped</span>
+            @endif
         </div>
-        
-        <div class="flex justify-between gap-2">
-            <form action="{{ route('services.restart') }}" method="POST" class="grow">
+        <p class="text-xs text-apple-grey mb-4 font-mono">{{ $key }}</p>
+        <div class="flex gap-2">
+            <form action="{{ route('services.restart') }}" method="POST" class="flex-1">
                 @csrf
                 <input type="hidden" name="service" value="{{ $key }}">
-                <button type="submit" class="btn-secondary w-full !py-2 !text-xs">Restart</button>
+                <button type="submit" class="btn-secondary text-xs w-full py-2">Restart</button>
             </form>
-            
             @php 
                 $logKey = match($key) {
                     'nginx' => 'nginx',
@@ -42,20 +40,8 @@
                 };
             @endphp
             @if($logKey)
-            <a href="{{ route('services.logs', ['type' => $logKey]) }}" class="btn-secondary shrink-0 !py-2 !px-4 !text-xs">Logs</a>
+            <a href="{{ route('services.logs', ['type' => $logKey]) }}" class="btn-secondary text-xs px-4 py-2">Logs</a>
             @endif
-        </div>
-    </div>
-    @endforeach
-</div>
-
-<h2 class="mt-12 mb-6 text-xl font-bold tracking-tight">Project Logs</h2>
-<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-    @foreach($projects as $proj)
-    <div class="card hover:ring-1 hover:ring-apple-blue/10">
-        <div class="flex justify-between items-center">
-            <div class="text-sm font-semibold truncate">{{ $proj }}</div>
-            <a href="{{ route('services.logs', ['type' => 'project', 'project' => $proj]) }}" class="btn-secondary !py-1.5 !px-3 !text-[10px] font-bold uppercase tracking-tight">Log</a>
         </div>
     </div>
     @endforeach
