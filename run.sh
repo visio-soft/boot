@@ -25,10 +25,9 @@ declare -A COMPONENTS=(
     ["nodejs"]=1
     ["devtools"]=0
     ["antigravity"]=0
-    ["projects"]=1
 )
 
-COMPONENT_KEYS=("system" "php" "nginx" "database" "redis" "nodejs" "devtools" "antigravity" "projects")
+COMPONENT_KEYS=("system" "php" "nginx" "database" "redis" "nodejs" "devtools" "antigravity")
 COMPONENT_LABELS=(
     "System Packages (git, curl, acl, supervisor)"
     "PHP 8.4 + PHP-FPM + Composer"
@@ -38,7 +37,6 @@ COMPONENT_LABELS=(
     "Node.js 20 + NPM"
     "VS Code + DBeaver"
     "Google Antigravity Editor"
-    "Project Setup (Native Laravel, Nginx, Horizon)"
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -82,7 +80,7 @@ select_none() {
 get_selected_tags() {
     local tags=""
     for key in "${COMPONENT_KEYS[@]}"; do
-        if [ "${COMPONENTS[$key]}" -eq 1 ] && [ "$key" != "projects" ]; then
+        if [ "${COMPONENTS[$key]}" -eq 1 ]; then
             if [ -n "$tags" ]; then
                 tags="$tags,$key"
             else
@@ -142,14 +140,6 @@ run_installation() {
         sudo ansible-playbook "$SCRIPT_DIR/setup.yml" --tags "$tags" --extra-vars "target_user=$TARGET_USER"
     fi
     
-    
-    # Run project setup if selected
-    if [ "${COMPONENTS["projects"]}" -eq 1 ]; then
-        print_header "Project Setup (projects.yml)"
-        print_info "Setting up projects for user: $TARGET_USER"
-        sudo ansible-playbook "$SCRIPT_DIR/projects.yml" --extra-vars "target_user=$TARGET_USER"
-    fi
-
     # Run Manager Setup (Antigravity)
     if [ "${COMPONENTS["antigravity"]}" -eq 1 ]; then
         setup_antigravity_manager
@@ -270,7 +260,6 @@ while true; do
         6) toggle_component "nodejs" ;;
         7) toggle_component "devtools" ;;
         8) toggle_component "antigravity" ;;
-        9) toggle_component "projects" ;;
         a|A) select_all ;;
         n|N) select_none ;;
         s|S) run_installation; exit 0 ;;

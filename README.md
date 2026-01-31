@@ -49,8 +49,8 @@ You can also run provisioners manually if needed:
 # Full System Setup
 ansible-playbook setup.yml
 
-# Install Specific Project
-ansible-playbook projects.yml --extra-vars "target_user=alp"
+# Full System Setup
+ansible-playbook setup.yml
 ```
 
 ---
