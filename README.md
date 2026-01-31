@@ -1,186 +1,73 @@
-# Ubuntu Developer Setup
+# Ubuntu PHP Developer Environment
 
-Ansible playbooks for setting up a **Native Laravel** development environment on **Ubuntu 24.04** with Nginx, PostgreSQL, and Redis.
+A professional, local PHP development stack for Ubuntu, inspired by Laravel Herd. This project provides an automated Ansible system provisioner and a sleek Laravel dashboard to manage your development workflows.
 
-## 🚀 Quick Start
+### 🚀 Features
 
-### Option 1: GitHub Codespaces (Recommended for Testing)
+- **Dynamic Project Management**: Create Laravel projects via Git URLs with built-in SSH access validation.
+- **Service Dashboard**: Real-time status, restart controls, and log viewing for Nginx, PHP 8.4 FPM, PostgreSQL, and Redis.
+- **Herd-style Log Viewer**: High-performance log tailing with:
+    - Live search and filtering.
+    - Auto-refreshing entries.
+    - **IDE Integration**: Click stack trace file paths to jump directly to VS Code.
+- **Software Center**: One-click installation of essential dev tools (VS Code, Chrome, TablePlus, DBeaver).
+- **Database Management**: Instant PostgreSQL database creation and a "Shortcut to TablePlus" with pre-filled connection strings.
+- **Modern UI**: Clean, Apple-inspired interface with Glassmorphism and dark/light support.
 
-Test the setup instantly in a cloud-based Ubuntu 24.04 environment:
+---
 
-1. Click the **Code** button on GitHub
-2. Select **Codespaces** tab
-3. Click **Create codespace on main**
-4. Wait for the environment to initialize
-5. Run `./run.sh` in the terminal
+### 🛠️ Components
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/visio-soft/ubuntu-ansible-developer)
+#### 1. Ansible System Provisioner
+The `setup.yml` playbook configures the base operating system with:
+- PHP 8.4 (FPM & CLI)
+- Nginx
+- PostgreSQL
+- Redis
+- Node.js & Composer
+- Supervisor (for background workers)
 
-### Option 2: Local Installation
+#### 2. The Manager App
+Located in the `/manager` directory, this Laravel 12 application serves as the command center for your development environment.
 
-The installation script will automatically install and configure native services (Nginx, PostgreSQL, Redis, PHP-FPM) for Laravel development.
+---
 
-```bash
-git clone https://github.com/visio-soft/ubuntu-ansible-developer.git
-cd ubuntu-ansible-developer
-chmod +x run.sh
-./run.sh
-```
+### 📥 Getting Started
 
-**One-liner:**
+1. **Initial Provisioning**:
+   Ensure you have Ansible installed, then run the setup script:
+   ```bash
+   ansible-playbook setup.yml
+   ```
 
-```bash
-git clone https://github.com/visio-soft/ubuntu-ansible-developer.git && cd ubuntu-ansible-developer && chmod +x run.sh && ./run.sh
-```
+2. **The Manager Interface**:
+   Access the web interface at:
+   [http://manager.test](http://manager.test)
 
-## 📁 File Structure
+3. **Creating Projects**:
+   - Navigate to **Projects**.
+   - Provide a Git SSH URL (e.g., `git@github.com:user/repo.git`).
+   - Use the **Check Access** button to verify your SSH keys.
+   - Choose to install **Laravel Horizon** optionally during setup.
 
-| File | Description |
-|------|-------------|
-| `software.yml` | Software installation (PHP, Nginx, PostgreSQL, Redis, Node, IDE) |
-| `projects.yml` | Project setup (clone, configure, Nginx, Horizon) |
-| `run.sh` | Interactive installation script |
+---
 
-## 🎛️ Installation Menu
+### 🖥️ Software & Services
 
-All components are selected by default:
+Monitor and manage your system from the **Services & Logs** section. You can:
+- Tail system logs or project-specific logs.
+- Edit your `php.ini` directly from the UI with auto-restart.
+- Install or update development software via the **Software Center**.
 
-```
-[1] ✓ System Packages (git, curl, acl, supervisor)
-[2] ✓ PHP 8.4 + PHP-FPM + Composer
-[3] ✓ Nginx Web Server
-[4] ✓ PostgreSQL Database
-[5] ✓ Redis Server
-[6] ✓ Node.js 20 + NPM
-[7] ✓ VS Code + DBeaver
-[8] ✓ Google Antigravity Editor
-[9] ✓ Project Setup (Native Laravel, Nginx, Horizon)
+---
 
-[a] Select All  [n] Select None  [s] Start  [q] Quit
-```
+### 📂 Directory Structure
 
-## ⚡ Quick Install (No Menu)
+- `/manager`: The Laravel Management Dashboard.
+- `setup.yml`: Main Ansible system playbook.
+- `projects.yml`: (Legacy) project definitions.
+- `software.yml`: (Legacy) software definitions.
 
-```bash
-./run.sh --all
-```
+---
 
-## ⚙️ Project Configuration
-
-Edit `projects.yml`:
-
-```yaml
-projects:
-  - { name: "myapp", repo: "git@github.com:user/repo.git", db: "myapp_db", user: "myapp_user" }
-```
-
-**Projects directory:** `/var/www/projects`
-
-## 🌐 Using Native Services
-
-After installation, your projects will be configured with native services:
-
-```bash
-cd /var/www/projects/myapp
-
-# Run artisan commands
-php artisan migrate
-php artisan tinker
-
-# Run composer
-composer install
-composer update
-
-# Run npm
-npm install
-npm run dev
-npm run build
-
-# Check services
-sudo systemctl status nginx
-sudo systemctl status postgresql
-sudo systemctl status redis-server
-sudo systemctl status php8.4-fpm
-
-# Check Laravel Horizon (queue worker)
-supervisorctl status
-supervisorctl restart myapp-horizon
-```
-
-## 📊 Post Installation
-
-```bash
-# Check service status
-sudo systemctl status nginx postgresql redis-server php8.4-fpm
-
-# Check Horizon status
-supervisorctl status
-
-# View Nginx logs
-sudo tail -f /var/log/nginx/error.log
-sudo tail -f /var/log/nginx/access.log
-
-# View Horizon logs
-tail -f /var/www/projects/myapp/storage/logs/horizon.log
-```
-
-**Projects available at:**
-- zone: `http://zone.test`
-- gate: `http://gate.test`
-
-## 🔧 Service Configuration
-
-The setup includes:
-- **PHP 8.4** with PHP-FPM
-- **Nginx** web server with configured server blocks
-- **PostgreSQL** database (latest version)
-- **Redis** for cache and queues
-- **Supervisor** for managing Laravel Horizon workers
-- **Node.js 20** for asset compilation
-
-All services run natively on the system for optimal performance.
-
-## 🗄️ Database Access
-
-Connect to PostgreSQL:
-
-```bash
-# Using psql
-psql -U zone_user -d zone_db -h 127.0.0.1
-
-# Using DBeaver (GUI)
-# Host: 127.0.0.1
-# Port: 5432
-# Database: zone_db
-# Username: zone_user
-# Password: secret
-```
-
-## 🔄 Service Management
-
-```bash
-# Restart services
-sudo systemctl restart nginx
-sudo systemctl restart postgresql
-sudo systemctl restart redis-server
-sudo systemctl restart php8.4-fpm
-
-# Reload Nginx (without dropping connections)
-sudo systemctl reload nginx
-
-# Restart Horizon workers
-supervisorctl restart zone-horizon
-supervisorctl restart gate-horizon
-```
-
-## 🏗️ Architecture
-
-This setup separates **program installations** from **project installations**:
-
-- **software.yml**: Installs system-wide programs (PHP, Nginx, databases) - independent of any project
-- **projects.yml**: Sets up Laravel projects - uses already installed programs
-
-This separation allows you to:
-- Install programs once, use for multiple projects
-- Update projects without reinstalling programs
-- Maintain cleaner, more modular setup
+*Built with ❤️ for Ubuntu PHP Developers.*
