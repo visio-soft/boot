@@ -232,8 +232,9 @@ class SiteController extends Controller
             return back()->with('error', '.env file not found.');
         }
 
-        // We can read normally if permissions allow, but safer to use sudo cat if we have it
-        $content = shell_exec("sudo cat " . escapeshellarg($path));
+        // Use Process::run() instead of shell_exec() for proper output capture with sudo
+        $result = Process::run("sudo cat " . escapeshellarg($path));
+        $content = $result->output();
         
         return view('sites.env', [
             'site' => $site,
