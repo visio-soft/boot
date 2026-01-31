@@ -1,39 +1,17 @@
 ---
-- name: Ultimate Ubuntu 24.04 Setup (Native Nginx + Horizon + Fixes)
+- name: System Provisioning (PHP 8.4 + Nginx + Postgres)
   hosts: localhost
   connection: local
   become: yes
   vars:
-    # =========================================================
-    # 1. SETTINGS
-    # =========================================================
     target_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     target_home: "{{ '/root' if target_user == 'root' else '/home/' + target_user }}"
-    projects_dir: "{{ target_home }}/projects"
-    
-    # Paths
-    composer_bin: "/usr/local/bin/composer"
-    php_bin: "/usr/bin/php"
-    php_fpm_sock: "/run/php/php8.4-fpm.sock"
-    
-    # Versions and Passwords
     php_ver: "8.4"
     node_ver: "20"
-    db_pass: "secret"
-    
-    # Ubuntu 24.04 Temp Fix
-    ansible_remote_tmp: /tmp
-    
-    # Projects
-    projects:
-      - { name: "zone", repo: "git@github.com:visio-soft/zone.git", db: "zone_db", user: "zone_user" }
-      - { name: "gate", repo: "git@github.com:visio-soft/gate.git", db: "gate_db", user: "gate_user" }
 
+  
   tasks:
-    # ==================================================================
-    # SECTION 1: SYSTEM DEPENDENCIES AND USER
-    # ==================================================================
-    - name: 1. Install Critical System Packages (Ubuntu 24 Compatible)
+    - name: Install System Packages
       apt:
         update_cache: yes
         name: 
@@ -43,94 +21,20 @@
           - unzip
           - git
           - curl
-          - wget
-          - gpg
-          - supervisor        # Required for Horizon
-          - python3-psycopg2  # Required for Ansible DB module
-          - libpq-dev
-        state: present
-
-    - name: 2. Create User
-      user:
-        name: "{{ target_user }}"
-        shell: /bin/bash
-        groups: sudo,www-data
-        append: yes
-        create_home: yes
-
-    - name: 3. Grant Passwordless Sudo Access
-      lineinfile:
-        path: "/etc/sudoers.d/{{ target_user }}"
-        line: "{{ target_user }} ALL=(ALL) NOPASSWD: ALL"
-        create: yes
-        mode: '0440'
-        validate: 'visudo -cf %s'
-
-    - name: 4. Generate SSH Key
-      user:
-        name: "{{ target_user }}"
-        generate_ssh_key: yes
-        ssh_key_type: ed25519
-        ssh_key_file: "{{ target_home }}/.ssh/id_ed25519"
-
-    - name: 5. Read Public Key
-      command: "cat {{ target_home }}/.ssh/id_ed25519.pub"
-      register: ssh_key
-      changed_when: false
-
-    - name: 🛑 GITHUB KEY CONFIRMATION 🛑
-      debug:
-        msg: 
-          - "################################################################"
-          - "KEY: {{ ssh_key.stdout }}"
-          - "################################################################"
-          - "Please add this key to GitHub: https://github.com/settings/ssh/new"
-          - "################################################################"
-
-    - name: WAITING FOR CONFIRMATION
-      pause:
-        prompt: "❗ Press ENTER after adding the Key to GitHub..."
-
-    # ==================================================================
-    # SECTION 2: REPOSITORIES (MODERN METHOD)
-    # ==================================================================
-    - name: 6. Add PHP PPA
-      apt_repository: { repo: "ppa:ondrej/php", state: present }
-
-    - name: 7. Add DBeaver Repo (GPG Fix)
-      shell: |
-        curl -fsSL https://dbeaver.io/debs/dbeaver.gpg.key | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/dbeaver.gpg
-        echo "deb https://dbeaver.io/debs/dbeaver-ce /" | tee /etc/apt/sources.list.d/dbeaver.list
-      args: { creates: /etc/apt/sources.list.d/dbeaver.list }
-
-    - name: 8. Add VS Code Repo (GPG Fix)
-      shell: |
-        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/microsoft.gpg
-        echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
-      args: { creates: /etc/apt/sources.list.d/vscode.list }
-
-    - name: 9. Add Node.js and Postgres Repos
-      shell: |
-        # Node.js
-        curl -fsSL https://deb.nodesource.com/setup_{{ node_ver }}.x -o /tmp/nodesource.sh && bash /tmp/nodesource.sh
-        
-        # Postgres
-        install -d /usr/share/postgresql-common/pgdg
-        curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
-        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
-
-    - name: 10. Install All Packages
-      apt:
-        update_cache: yes
-        state: latest
-        name:
+          - supervisor
           - nginx
           - redis-server
           - postgresql
           - postgresql-client
-          - dbeaver-ce
-          - code
           - nodejs
+        state: present
+
+    - name: Add PHP Repository
+      apt_repository: { repo: "ppa:ondrej/php", state: present }
+
+    - name: Install PHP
+      apt:
+        name:
           - "php{{ php_ver }}"
           - "php{{ php_ver }}-fpm"
           - "php{{ php_ver }}-curl"
@@ -142,224 +46,21 @@
           - "php{{ php_ver }}-intl"
           - "php{{ php_ver }}-gd"
           - "php{{ php_ver }}-redis"
-          - "php{{ php_ver }}-sqlite3" # Required for Sushi package
-          - "php{{ php_ver }}-imagick"
-          - "php{{ php_ver }}-soap"
+          - "php{{ php_ver }}-sqlite3"
+        state: latest
 
-    - name: 11. Install Global Composer
+    - name: Install Composer
       shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
       args: { creates: /usr/local/bin/composer }
 
-    - name: 11b. Enable and Start PHP-FPM
-      systemd:
-        name: "php{{ php_ver }}-fpm"
-        enabled: yes
+    - name: Start Services
+      service:
+        name: "{{ item }}"
         state: started
-
-    # ==================================================================
-    # SECTION 3: DATABASE
-    # ==================================================================
-    - name: 12. Setup DB and Users
-      become_user: postgres
-      block:
-        - postgresql_user: { name: "{{ item.user }}", password: "{{ db_pass }}" }
-          loop: "{{ projects }}"
-        - postgresql_db: { name: "{{ item.db }}", owner: "{{ item.user }}" }
-          loop: "{{ projects }}"
-
-    # ==================================================================
-    # SECTION 4: NGINX CONFIGURATION AND PROJECT SETUP (USER MODE)
-    # ==================================================================
-    - name: 13. Create Projects Directory
-      become: yes
-      become_user: "{{ target_user }}"
-      become_flags: '-i'
-      file: { path: "{{ projects_dir }}", state: directory, mode: '0755' }
-
-    - name: 14. Clone Projects
-      become: yes
-      become_user: "{{ target_user }}"
-      become_flags: '-i'
-      git:
-        repo: "{{ item.repo }}"
-        dest: "{{ projects_dir }}/{{ item.name }}"
-        accept_hostkey: yes
-        version: main
-        force: yes
-      loop: "{{ projects }}"
-
-    - name: 15. Project Settings (.env, Composer, Artisan, NPM)
-      become: yes
-      become_user: "{{ target_user }}"
-      become_flags: '-i'
-      shell: |
-        # .env Configuration
-        cp -n .env.example .env || true
-        sed -i "s/^DB_DATABASE=.*/DB_DATABASE={{ item.db }}/" .env
-        sed -i "s/^DB_USERNAME=.*/DB_USERNAME={{ item.user }}/" .env
-        sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD={{ db_pass }}/" .env
-        sed -i "s|^APP_URL=.*|APP_URL=http://{{ item.name }}.test|" .env
-        sed -i "s/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=redis/" .env
-        
-        # Composer Install
-        php -d memory_limit=-1 {{ composer_bin }} install --no-interaction --prefer-dist
-        
-        # Artisan
-        php artisan key:generate
-        php artisan migrate --force
-        php artisan storage:link
-        
-        # NPM
-        npm install
-        npm run build
-      args:
-        chdir: "{{ projects_dir }}/{{ item.name }}"
-      loop: "{{ projects }}"
-
-    # ==================================================================
-    # SECTION 5: PERMISSIONS AND SUPERVISOR (HORIZON FIX)
-    # ==================================================================
-    - name: 16. Fix File Permissions (Horizon Spawn Error Fix)
-      file:
-        path: "{{ projects_dir }}/{{ item.name }}/storage"
-        state: directory
-        recurse: yes
-        owner: "{{ target_user }}"
-        group: "www-data"
-        mode: '0775'
-      loop: "{{ projects }}"
-    
-    - name: 16b. Bootstrap Cache Permissions
-      file:
-        path: "{{ projects_dir }}/{{ item.name }}/bootstrap/cache"
-        state: directory
-        recurse: yes
-        owner: "{{ target_user }}"
-        group: "www-data"
-        mode: '0775'
-      loop: "{{ projects }}"
-
-    # ==================================================================
-    # SECTION 6: NGINX CONFIGURATION
-    # ==================================================================
-    - name: 16c. Create Nginx Server Blocks for Projects
-      copy:
-        dest: "/etc/nginx/sites-available/{{ item.name }}.test"
-        content: |
-          server {
-              listen 80;
-              listen [::]:80;
-              server_name {{ item.name }}.test;
-              root {{ projects_dir }}/{{ item.name }}/public;
-
-              add_header X-Frame-Options "SAMEORIGIN";
-              add_header X-Content-Type-Options "nosniff";
-
-              index index.php;
-
-              charset utf-8;
-
-              location / {
-                  try_files $uri $uri/ /index.php?$query_string;
-              }
-
-              location = /favicon.ico { access_log off; log_not_found off; }
-              location = /robots.txt  { access_log off; log_not_found off; }
-
-              error_page 404 /index.php;
-
-              location ~ \.php$ {
-                  fastcgi_pass unix:{{ php_fpm_sock }};
-                  fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-                  fastcgi_split_path_info ^(.+\.php)(/.+)$;
-                  fastcgi_index index.php;
-                  include fastcgi_params;
-                  fastcgi_param PATH_INFO $fastcgi_path_info;
-              }
-
-              location ~ /\.(?!well-known).* {
-                  deny all;
-              }
-          }
-      loop: "{{ projects }}"
-
-    - name: 16d. Enable Nginx Server Blocks
-      file:
-        src: "/etc/nginx/sites-available/{{ item.name }}.test"
-        dest: "/etc/nginx/sites-enabled/{{ item.name }}.test"
-        state: link
-      loop: "{{ projects }}"
-
-    - name: 16e. Add Projects to /etc/hosts
-      lineinfile:
-        path: /etc/hosts
-        regexp: "^127\\.0\\.0\\.1\\s+{{ item.name }}\\.test"
-        line: "127.0.0.1 {{ item.name }}.test"
-        state: present
-      loop: "{{ projects }}"
-
-    - name: 16f. Test Nginx Configuration
-      command: nginx -t
-      register: nginx_test
-      changed_when: false
-      failed_when: false
-
-    - name: 16f2. Display Nginx Test Errors
-      debug:
-        msg: 
-          - "Nginx configuration test failed!"
-          - "Error output: {{ nginx_test.stderr }}"
-      when: nginx_test.rc != 0
-
-    - name: 16f3. Fail if Nginx Test Failed
-      fail:
-        msg: "Nginx configuration is invalid. Please check the error message above."
-      when: nginx_test.rc != 0
-
-    - name: 16g. Reload Nginx
-      systemd:
-        name: nginx
-        state: reloaded
-      when: nginx_test.rc == 0
-
-    # ==================================================================
-    # SECTION 7: SUPERVISOR (HORIZON FIX)
-    # ==================================================================
-    - name: 17. Create Supervisor Configs
-      copy:
-        dest: "/etc/supervisor/conf.d/{{ item.name }}-horizon.conf"
-        content: |
-          [program:{{ item.name }}-horizon]
-          process_name=%(program_name)s
-          command={{ php_bin }} {{ projects_dir }}/{{ item.name }}/artisan horizon
-          autostart=true
-          autorestart=true
-          user={{ target_user }}
-          redirect_stderr=true
-          stdout_logfile={{ projects_dir }}/{{ item.name }}/storage/logs/horizon.log
-          stopwaitsecs=3600
-      loop: "{{ projects }}"
-      register: supervisor_config
-
-    - name: 18. Start/Restart Supervisor
-      block:
-        - command: supervisorctl reread
-          when: supervisor_config.changed
-        
-        - command: supervisorctl update
-          when: supervisor_config.changed
-
-        - command: "supervisorctl restart {{ item.name }}-horizon"
-          loop: "{{ projects }}"
-          ignore_errors: yes
-
-    - name: 19. Final Status
-      command: supervisorctl status
-      register: final_status
-
-    - name: 🏁 RESULT 🏁
-      debug:
-        msg: 
-          - "Setup Completed Successfully."
-          - "Horizon Status:"
-          - "{{ final_status.stdout_lines }}"
+        enabled: yes
+      loop:
+        - nginx
+        - "php{{ php_ver }}-fpm"
+        - postgresql
+        - redis-server
+        - supervisor
