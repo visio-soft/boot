@@ -28,6 +28,7 @@
             }
         }
     </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style type="text/tailwindcss">
         @layer components {
             .btn { @apply px-6 py-3 rounded-apple-sm font-semibold text-sm cursor-pointer transition-all bg-apple-blue text-white hover:bg-apple-blue-hover disabled:opacity-50; }

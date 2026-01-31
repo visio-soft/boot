@@ -19,7 +19,6 @@ class ServicesController extends Controller
         'nginx' => '/var/log/nginx/error.log',
         'php' => '/var/log/php8.4-fpm.log',
         'redis' => '/var/log/redis/redis-server.log', 
-        // Auto-detect postgres version in index method or hardcode based on inspection
         'postgres' => '/var/log/postgresql/postgresql-14-main.log', 
     ];
 
@@ -55,8 +54,6 @@ class ServicesController extends Controller
         }
 
         Process::run("sudo systemctl restart $service");
-        
-        // Wait a bit?
         sleep(1);
 
         return back()->with('success', "Restarted {$this->services[$service]}");
@@ -70,42 +67,85 @@ class ServicesController extends Controller
         if ($type === 'project') {
             $project = $request->input('project');
             $logPath = "/var/www/projects/{$project}/storage/logs/laravel.log";
-            $title = "Project: $project";
+            $title = $project;
         } elseif (isset($this->logs[$type])) {
             $logPath = $this->logs[$type];
-            // Adjust postgres log dynamically if possible? 
             if ($type === 'postgres') {
-                // Find actual log file
                 $files = glob('/var/log/postgresql/postgresql-*-main.log');
                 if (!empty($files)) {
-                    $logPath = end($files); // Use latest version found
+                    $logPath = end($files);
                 }
             }
         } else {
             return redirect()->route('services.index');
         }
 
-        // Read last 200 lines for better context in viewer
-        $content = '';
-        if ($logPath) {
-            $cmd = "sudo tail -n 200 $logPath";
+        $logs = [];
+        if ($logPath && File::exists($logPath)) {
+            // Read last 2000 lines for infinite scrolling feel
+            // Use sudo only for system logs (owned by root), project logs are www-data readable
+            $prefix = ($type === 'project') ? '' : 'sudo ';
+            $cmd = "{$prefix}tail -n 2000 " . escapeshellarg($logPath);
+            
             $res = Process::run($cmd);
             $content = $res->output();
-            if (empty($content) && !empty($res->errorOutput())) {
-                $content = "Error reading log: " . $res->errorOutput();
+            
+            // Parse if it's a Laravel log
+            if ($type === 'project') {
+                $parsed = $this->parseLaravelLog($content);
+                if (count($parsed) > 0) {
+                    $logs = $parsed;
+                } else {
+                    // Fallback to raw if parsing failed but we have content
+                    $logs = [['raw' => empty($content) ? 'Log file is empty or could not be read.' : $content]];
+                }
+            } else {
+                // Return generic raw logs wrapped in object
+                $logs = [['raw' => $content]];
             }
-        } else {
-            $content = "Log file not found.";
         }
 
         if ($request->has('json')) {
-            return response()->json([
-                'content' => $content,
-                'path' => $logPath
-            ]);
+            return response()->json($logs);
         }
 
-        return view('services.logs', compact('content', 'title', 'type', 'logPath'));
+        return view('services.logs', compact('logs', 'title', 'type', 'logPath'));
+    }
+
+    private function parseLaravelLog($content)
+    {
+        $lines = explode("\n", $content);
+        $parsed = [];
+        $currentEntry = null;
+
+        foreach ($lines as $line) {
+            // Match: [2024-01-22 13:18:35] local.ERROR: Message...
+            // Added [\w-]+ to allow hyphens in env name
+            if (preg_match('/^\[(?<date>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (?<env>[\w-]+)\.(?<level>\w+): (?<message>.*)/', $line, $matches)) {
+                if ($currentEntry) {
+                    // Push previous entry (latest first)
+                    array_unshift($parsed, $currentEntry);
+                }
+                $currentEntry = [
+                    'date' => $matches['date'],
+                    'env' => $matches['env'],
+                    'level' => strtoupper($matches['level']),
+                    'message' => $matches['message'],
+                    'context' => '',
+                    'stack_trace' => ''
+                ];
+            } else {
+                if ($currentEntry) {
+                    // It's a continuation/stack trace
+                    $currentEntry['stack_trace'] .= $line . "\n";
+                }
+            }
+        }
+        if ($currentEntry) {
+            array_unshift($parsed, $currentEntry);
+        }
+
+        return $parsed;
     }
 
     public function phpIni()
@@ -116,9 +156,7 @@ class ServicesController extends Controller
         if (File::exists($path)) {
             $content = file_get_contents($path);
         } else {
-            // fallback check
             $res = Process::run("php --ini");
-            // parse output?
             $content = "; Could not read $path directly. \n; Output of php --ini:\n" . $res->output();
         }
 
@@ -130,14 +168,6 @@ class ServicesController extends Controller
         $content = $request->input('content');
         $path = '/etc/php/8.4/fpm/php.ini';
 
-        // Dangerous, but requested.
-        // Write to temp file then move?
-        // Or echo to sudo tee
-        
-        // Sanitize? It's root level config. User is trusted.
-        // We can't pass huge content via command line easily if too big.
-        // Better: write to temporary file in storage, then sudo cp
-        
         $tempFile = tempnam(sys_get_temp_dir(), 'phpini');
         file_put_contents($tempFile, $content);
 

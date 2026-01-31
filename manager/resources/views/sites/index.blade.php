@@ -38,63 +38,117 @@
 <!-- Project List -->
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
     @foreach($sites as $site)
-    <div class="card flex flex-col h-full">
-        <div class="flex items-start justify-between mb-4">
-            <div>
-                <h3 class="text-lg font-semibold">{{ $site['name'] }}</h3>
-                <a href="{{ $site['url'] }}" target="_blank" class="text-sm text-apple-blue hover:underline">{{ $site['url'] }}</a>
+    <div class="card p-0 flex flex-col h-full overflow-hidden hover:shadow-md transition-shadow duration-300">
+        <!-- Card Header -->
+        <div class="p-5 pb-0">
+            <div class="flex items-start justify-between mb-2">
+                <h3 class="text-xl font-bold text-[#1d1d1f] tracking-tight truncate">{{ $site['name'] }}</h3>
+                <span class="badge {{ $site['type'] === 'Laravel' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-600 border-gray-100' }}">
+                    {{ $site['type'] }}
+                </span>
             </div>
-            <span class="badge {{ $site['type'] === 'Laravel' ? 'badge-laravel' : 'badge-other' }}">{{ $site['type'] }}</span>
-        </div>
-
-        <div class="text-sm text-apple-grey space-y-1 mb-6 flex-1">
-            <p>Database: <span class="text-[#1d1d1f]">{{ $site['db_name'] }}</span></p>
-            <p>Version: <span class="text-[#1d1d1f]">{{ $site['version'] ?? 'N/A' }}</span></p>
-        </div>
-
-        @if($site['type'] === 'Laravel')
-        <div class="flex items-center justify-between py-3 border-t border-apple-border">
-            <span class="text-sm text-apple-grey">Horizon</span>
-            @if($site['horizon'] === 'running')
-                <div class="flex items-center gap-3">
-                    <a href="{{ $site['url'] }}/horizon" target="_blank" class="text-xs text-apple-blue hover:underline">Open</a>
-                    <span class="flex items-center gap-1.5 text-xs text-green-600 font-medium">
-                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Running
-                    </span>
+            <a href="{{ $site['url'] }}" target="_blank" class="text-sm text-apple-blue hover:underline font-medium mb-4 block truncate">
+                {{ $site['url'] }}
+            </a>
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-4 py-4 border-t border-dashed border-gray-200">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">DATABASE</span>
+                    <p class="text-sm font-medium text-gray-700 truncate" title="{{ $site['db_name'] }}">
+                        {{ $site['db_name'] }}
+                    </p>
                 </div>
-            @else
-                <span class="text-xs text-apple-grey">Inactive</span>
-            @endif
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">VERSION</span>
+                    <p class="text-sm font-medium text-gray-700">
+                        {{ $site['version'] ?? 'N/A' }}
+                    </p>
+                </div>
+                @if($site['type'] === 'Laravel')
+                <div class="col-span-2">
+                     <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">HORIZON</span>
+                     <div class="mt-1">
+                        @if($site['horizon'] === 'running')
+                            <a href="{{ $site['url'] }}/horizon" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 transition-colors">
+                                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Active
+                            </a>
+                        @else
+                            <span class="inline-block px-2 py-1 rounded bg-gray-50 text-gray-500 text-xs font-semibold">
+                                Inactive
+                            </span>
+                        @endif
+                     </div>
+                </div>
+                @endif
+            </div>
         </div>
-        @endif
 
-        <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-apple-border">
-            <!-- Logs -->
-            <a href="{{ route('services.logs', ['type' => 'project', 'project' => $site['name']]) }}" class="btn-secondary text-[11px] h-8 flex items-center justify-center font-medium" title="View Logs">
-                Logs
-            </a>
+        <!-- Action Footer -->
+        <div class="mt-auto border-t border-gray-100 bg-gray-50/50 p-2 flex items-center justify-between">
+            <div class="flex gap-1">
+                <a href="ssh://alp@127.0.0.1" 
+                   class="flex items-center justify-center w-8 h-8 rounded hover:bg-white hover:shadow-sm transition-all text-gray-500 hover:text-gray-800" 
+                   title="Open SSH Terminal">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </a>
+                <a href="{{ route('services.logs', ['type' => 'project', 'project' => $site['name']]) }}" 
+                   class="flex items-center justify-center w-8 h-8 rounded hover:bg-white hover:shadow-sm transition-all text-gray-500 hover:text-gray-800" 
+                   title="View Logs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </a>
+            </div>
 
-            <!-- Env -->
-            @if($site['env_exists'])
-            <a href="{{ route('sites.env', $site['name']) }}" class="btn-secondary text-[11px] h-8 flex items-center justify-center font-medium" title="Edit .env">
-                .env
-            </a>
-            @else
-            <span class="btn-secondary opacity-50 cursor-not-allowed text-[11px] h-8 flex items-center justify-center font-medium">.env</span>
-            @endif
-
-            <!-- Delete -->
-            <form action="{{ route('sites.destroy', $site['name']) }}" method="POST" class="h-8" onsubmit="return confirm('Delete this project?')">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn-secondary w-full h-full text-[11px] flex items-center justify-center font-medium hover:bg-red-50 hover:text-red-600 transition-colors" title="Delete">
-                    Delete
+            <!-- Dropdown Container -->
+            <div class="relative">
+                <button onclick="toggleDropdown(event, 'dropdown-{{ $loop->index }}')" class="flex items-center justify-center w-8 h-8 rounded hover:bg-white hover:shadow-sm transition-all text-gray-500 hover:text-gray-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                 </button>
-            </form>
+                <!-- Dropdown Menu -->
+                <div id="dropdown-{{ $loop->index }}" class="dropdown-menu absolute right-0 bottom-full mb-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 hidden z-20">
+                    @if($site['env_exists'])
+                    <a href="{{ route('sites.env', $site['name']) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg">
+                        Edit .env
+                    </a>
+                    @endif
+                    <form action="{{ route('sites.destroy', $site['name']) }}" method="POST" onsubmit="return confirm('Delete this project? Database will be preserved.')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 last:rounded-b-lg">
+                            Delete Project
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     @endforeach
 </div>
+
+<!-- ... services section ... -->
+
+<script>
+// ... git check code ...
+
+// Dropdown Logic
+function toggleDropdown(e, id) {
+    e.stopPropagation();
+    const menu = document.getElementById(id);
+    const isHidden = menu.classList.contains('hidden');
+    
+    // Close all others
+    document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.add('hidden'));
+    
+    if (isHidden) {
+        menu.classList.remove('hidden');
+    }
+}
+
+// Close on outside click
+document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.add('hidden'));
+});
+</script>
 
 <!-- Services Section -->
 <div class="mt-16 pt-8 border-t border-apple-border">

@@ -29,6 +29,7 @@
           - supervisor
           - python3-psycopg2
           - libpq-dev
+          - openssh-server
         state: present
       tags: [system]
 
